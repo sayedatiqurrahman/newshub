@@ -34,6 +34,7 @@ export default function Categories() {
 
     useEffect(() => {
         const storedCategories = getCategories();
+        console.log("storedCategories", storedCategories);
         setCategories(storedCategories);
     }, [localStorage.getItem("categories")]);
 

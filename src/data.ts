@@ -43,10 +43,19 @@ const initialNews = [
     categoryId: "technology",
     content:
       "In a groundbreaking discovery, scientists have announced the discovery of a new planet that is potentially habitable for humans. The planet, named Kepler-186f, is located in the habitable zone of its star, meaning that it could have liquid water on its surface. This discovery could have major implications for the future of humanity, as it could provide a new home for humans if Earth becomes uninhabitable.",
+    imageUrl:
+      "https://images.unsplash.com/photo-1507232179824-3ba641c20da9?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80",
+    summary:
+      "Scientists discover a new planet that is potentially habitable for humans.",
+    author: "Dr. Jane Smith",
+    createdAt: "2023-10-27T10:00:00.000Z",
+    viewCount: 1500,
+    isBreakingNews: true,
   },
 ];
 
 export const initializeLocalStorage = () => {
+  console.log("initializeLocalStorage called");
   if (!localStorage.getItem("categories")) {
     localStorage.setItem("categories", JSON.stringify(initialCategories));
   }

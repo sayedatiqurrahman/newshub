@@ -13,6 +13,8 @@ export function ArticleGrid({
     activeCategory = "all",
     sortBy = "newest",
 }) {
+
+
     const [filteredArticles, setFilteredArticles] = useState([]);
 
     // Reference for infinite scroll
