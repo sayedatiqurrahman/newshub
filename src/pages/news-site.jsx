@@ -13,7 +13,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "../components/ui/select";
+} from "../components/ui/select.jsx";
 
 export default function NewsSite() {
   const [activeCategory, setActiveCategory] = useState("all");
@@ -22,18 +22,44 @@ export default function NewsSite() {
   const [hasMore, setHasMore] = useState(true);
   const [allArticles, setAllArticles] = useState([]);
 
-  // Fetch categories
   const { data: categories = [] } = useQuery({
-    queryKey: ["/api/categories"],
+    queryKey: ["categories"],
+    queryFn: () => {
+      return JSON.parse(localStorage.getItem("categories") || "[]");
+    },
   });
 
-  // Fetch articles with pagination
   const {
     data: articlesData,
     isLoading,
     isFetching,
   } = useQuery({
-    queryKey: ["/api/articles", page, activeCategory, sortBy],
+    queryKey: ["articles", page, activeCategory, sortBy],
+    queryFn: () => {
+      let articles = JSON.parse(localStorage.getItem("news") || "[]");
+
+      // Filter by category
+      if (activeCategory !== "all") {
+        articles = articles.filter((article) => article.categoryId === activeCategory);
+      }
+
+      // Sort articles
+      if (sortBy === "newest") {
+        articles.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      } else if (sortBy === "oldest") {
+        articles.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+      }
+
+      const pageSize = 10;
+      const start = (page - 1) * pageSize;
+      const end = start + pageSize;
+      const paginatedArticles = articles.slice(start, end);
+
+      return {
+        articles: paginatedArticles,
+        hasMore: end < articles.length,
+      };
+    },
   });
 
   // Update articles when data is fetched
@@ -80,7 +106,7 @@ export default function NewsSite() {
             <a className="text-white hover:text-gray-200">Home</a>
           </Link>
           {categories.slice(0, 5).map((category) => (
-            <Link key={category.id} href={`/?category=${category.slug}`}>
+            <Link key={category.id} href={`/?category=${category.id}`}>
               <a className="text-white hover:text-gray-200">{category.name}</a>
             </Link>
           ))}
@@ -145,9 +171,14 @@ export default function NewsSite() {
             All News
           </Button>
           {categories.slice(0, 5).map((category) => (
-            <Link key={category.id} href={`/?category=${category.slug}`}>
-              <a className="text-white hover:text-gray-200">{category.name}</a>
-            </Link>
+            <Button
+              key={category.id}
+              {...(activeCategory === category.id ? { variant: "default" } : { variant: "outline" })}
+              className="whitespace-nowrap rounded-full"
+              onClick={() => setActiveCategory(category.id)}
+            >
+              {category.name}
+            </Button>
           ))}
         </div>
 

@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { cn } from "../../lib/utils.js";
+import { cn } from "../../lib/utils";
 import {
     LayoutDashboard,
     FileText,

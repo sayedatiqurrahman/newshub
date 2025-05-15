@@ -2,7 +2,7 @@ import * as React from "react"
 import * as AlertDialogPrimitive from "@radix-ui/react-alert-dialog"
 
 import { cn } from "@/lib/utils"
-import { buttonVariants } from "@/components/ui/button"
+import { buttonVariants } from "@/components/ui/button.jsx"
 
 const AlertDialog = AlertDialogPrimitive.Root
 
@@ -25,7 +25,7 @@ const AlertDialogOverlay = React.forwardRef(
 AlertDialogOverlay.displayName = AlertDialogPrimitive.Overlay.displayName
 
 const AlertDialogContent = React.forwardRef(
-  ({ className, ...props }, ref) => (
+  ({ className, children, ...props }, ref) => (
     <AlertDialogPortal>
       <AlertDialogOverlay />
       <AlertDialogPrimitive.Content
@@ -35,7 +35,9 @@ const AlertDialogContent = React.forwardRef(
           className
         )}
         {...props}
-      />
+      >
+        {children}
+      </AlertDialogPrimitive.Content>
     </AlertDialogPortal>
   )
 )

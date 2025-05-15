@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "../../lib/queryClient";
 import { Input } from "../../components/ui/input.jsx";
 import { Button } from "../../components/ui/button.jsx";
-import { Textarea } from "../../components/ui/textarea.jsx";
+import { Textarea } from "../../components/ui/textarea";
 import { Checkbox } from "../../components/ui/checkbox.jsx";
 import { Label } from "../../components/ui/label.jsx";
 import {
@@ -20,8 +20,8 @@ import {
     CardHeader,
     CardTitle,
 } from "../../components/ui/card.jsx";
-import { Alert, AlertDescription } from "../../components/ui/alert.jsx";
-import { useToast } from "../../hooks/use-toast.js";
+import { Alert, AlertDescription } from "../../components/ui/alert";
+import { useToast } from "../../hooks/use-toast";
 import { slugify } from "../../lib/utils";
 
 export function ArticleForm({

@@ -1,7 +1,7 @@
 import { Switch, Route } from "wouter";
 import { queryClient } from "./lib/queryClient.js";
 import { QueryClientProvider } from "@tanstack/react-query";
-import { Toaster } from "./components/ui/toaster.jsx";
+import { CustomToaster } from "./components/ui/toaster";
 import { TooltipProvider } from "./components/ui/tooltip.jsx";
 import NotFound from "./pages/not-found.jsx";
 import Dashboard from "./pages/dashboard.jsx";
@@ -10,7 +10,7 @@ import Categories from "./pages/categories.jsx";
 import NewsSite from "./pages/news-site.jsx";
 import ArticleDetail from "./pages/article-detail.jsx";
 import { useEffect } from "react";
-import { initializeLocalStorage } from "./data";
+import { initializeLocalStorage } from "./data.js";
 
 function Router() {
   return (
@@ -38,7 +38,7 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <Toaster />
+        <CustomToaster />
         <Router />
       </TooltipProvider>
     </QueryClientProvider>

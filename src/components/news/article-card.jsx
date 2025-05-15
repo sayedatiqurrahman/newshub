@@ -1,6 +1,6 @@
 import { Link } from "wouter";
-import { timeAgo, truncateText, getCategoryColor } from "../../lib/utils.js";
-import { cn } from "../../lib/utils.js";
+import { timeAgo, truncateText, getCategoryColor } from "../../lib/utils";
+import { cn } from "../../lib/utils";
 
 export function ArticleCard({
     article,

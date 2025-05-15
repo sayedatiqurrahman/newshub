@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { StatCard } from "@/components/dashboard/stat-card";
-import { CategoryDistribution } from "@/components/dashboard/category-distribution";
+import { CategoryDistribution } from "@/components/dashboard/category-distribution.jsx";
 import { Button } from "@/components/ui/button";
 import { FileText, Tag, Eye } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";

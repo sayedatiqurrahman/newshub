@@ -30,9 +30,9 @@ export function ArticleGrid({
         // Filter by category
         if (activeCategory !== "all") {
             const categoryId = categories.find((c) => c.slug === activeCategory)?.id;
-            if (categoryId) {
+            if (activeCategory !== "all") {
                 filtered = filtered.filter(
-                    (article) => article.categoryId === categoryId
+                    (article) => article.categoryId === activeCategory
                 );
             }
         }

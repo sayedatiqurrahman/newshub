@@ -1,4 +1,4 @@
-import { Progress } from "../../components/ui/progress.jsx";
+import { Progress } from "../../components/ui/progress";
 
 export function CategoryDistribution({ data }) {
     // Define some colors for different categories

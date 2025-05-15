@@ -21,6 +21,7 @@ import {
 } from "../components/ui/alert-dialog.jsx";
 import { useToast } from "../hooks/use-toast.js";
 import { Plus, Loader2 } from "lucide-react";
+import { getCategories } from "../data.js";
 
 export default function Categories() {
     const { toast } = useToast();
@@ -32,9 +33,9 @@ export default function Categories() {
     const [categories, setCategories] = useState([]);
 
     useEffect(() => {
-        const storedCategories = []; //getCategories();
+        const storedCategories = getCategories();
         setCategories(storedCategories);
-    }, []);
+    }, [localStorage.getItem("categories")]);
 
     // Handle category edit
     const handleEdit = (category) => {

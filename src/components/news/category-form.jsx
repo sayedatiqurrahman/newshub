@@ -11,7 +11,7 @@ import {
     CardHeader,
     CardTitle,
 } from "../../components/ui/card";
-import { Alert, AlertDescription } from "../../components/ui/alert.jsx";
+import { Alert, AlertDescription } from "../../components/ui/alert";
 import { useToast } from "../../hooks/use-toast.js";
 import { slugify } from "../../lib/utils";
 
@@ -51,21 +51,19 @@ export function CategoryForm({ category, onSuccess }) {
 
                 const method = category ? "PATCH" : "POST";
 
-                const response = await fetch(url, {
-                    method,
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
-                    body: JSON.stringify(data),
-                });
-
-                if (!response.ok) {
-                    throw new Error(
-                        `Failed to submit: ${response.status} ${response.statusText}`
+                let categories = JSON.parse(localStorage.getItem("categories") || "[]");
+                if (category) {
+                    // Update existing category
+                    categories = categories.map((c) =>
+                        c.id === category.id ? { ...category, ...data } : c
                     );
+                } else {
+                    // Create new category
+                    const newCategory = { id: Date.now().toString(), ...data };
+                    categories = [...categories, newCategory];
                 }
-
-                return await response.json();
+                localStorage.setItem("categories", JSON.stringify(categories));
+                return categories;
             } catch (err) {
                 console.error("Error submitting category:", err);
                 throw err;
@@ -75,7 +73,7 @@ export function CategoryForm({ category, onSuccess }) {
         },
         onSuccess: () => {
             // Invalidate category queries to refresh data
-            queryClient.invalidateQueries({ queryKey: ["/api/categories"] });
+            queryClient.invalidateQueries({ queryKey: ["categories"] });
 
             toast({
                 title: category ? "Category Updated" : "Category Created",

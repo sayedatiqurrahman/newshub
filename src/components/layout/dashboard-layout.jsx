@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Sidebar } from "./sidebar.jsx";
+import { Sidebar } from "./sidebar";
 import { Navbar } from "./navbar.jsx";
 
 export function DashboardLayout({ children, title }) {
