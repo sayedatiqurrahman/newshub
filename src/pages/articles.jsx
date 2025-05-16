@@ -1,11 +1,10 @@
-import { useState } from "react";
+import { useState, useContext } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { DashboardLayout } from "../components/layout/dashboard-layout";
 import { ArticleForm } from "../components/news/article-form";
 import { Button } from "../components/ui/button";
-import { Input } from "../components/ui/input";
-import { apiRequest } from "../lib/queryClient";
 
+import { useNews } from "../context/news-context";
 
 import {
     Dialog,
@@ -50,10 +49,13 @@ import {
 } from "lucide-react";
 import { Badge } from "../components/ui/badge";
 import { Checkbox } from "../components/ui/checkbox";
+import { Input } from "../components/ui/input";
+
 
 export default function Articles() {
     const { toast } = useToast();
     const queryClient = useQueryClient();
+    const { articles: contextArticles, categories, createArticle, updateArticleData, deleteArticleData } = useNews();
 
     // State for dialogs
     const [showAddArticleModal, setShowAddArticleModal] = useState(false);
@@ -62,49 +64,34 @@ export default function Articles() {
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedIds, setSelectedIds] = useState([]);
 
-    // Fetch articles
-    const { data, isLoading: isLoadingArticles } = useQuery({
-        queryKey: ["/api/articles"],
+    const { data: articles = contextArticles, isLoading: isLoadingArticles } = useQuery({
+        queryKey: ["articles"],
+        queryFn: () => contextArticles,
+        staleTime: Infinity, // Add staleTime to prevent unnecessary refetches
     });
 
-    // Extract articles array from response
-    const articles = data?.articles || [];
-
-    // Fetch categories
-    const { data: categories = [], isLoading: isLoadingCategories } = useQuery({
-        queryKey: ["/api/categories"],
+    const { data: categoriesData = categories, isLoading: isLoadingCategories } = useQuery({
+        queryKey: ["categories"],
+        queryFn: () => categories,
+        staleTime: Infinity, // Add staleTime to prevent unnecessary refetches
     });
 
-    // Create article mutation
     const createArticleMutation = useMutation({
         mutationFn: async (data) => {
-            const formData = new FormData();
-
-            // Append all text fields
-            Object.entries(data).forEach(([key, value]) => {
-                if (key !== "image") {
-                    formData.append(key, value?.toString() ?? "");
-                }
-            });
-
-            // Append image if exists
-            if (data.image) {
-                formData.append("image", data.image);
-            }
-
-            const response = await apiRequest("POST", "/api/articles", formData);
-            return await response.json();
+            const newArticle = await createArticle(data); // Ensure createArticle returns a Promise
+            return newArticle;
         },
         onSuccess: () => {
             toast({
                 title: "Article created",
                 description: "The article has been created successfully.",
             });
-            setShowAddArticleModal(false);
-            queryClient.invalidateQueries({ queryKey: ["/api/articles"] });
-            queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
+            setShowAddArticleModal(prev => false);
+            queryClient.invalidateQueries({ queryKey: ["articles"] });
+            queryClient.invalidateQueries({ queryKey: ["stats"] });
         },
         onError: (error) => {
+            console.error("createArticleMutation onError called", error);
             toast({
                 title: "Error creating article",
                 description: error.message,
@@ -113,39 +100,20 @@ export default function Articles() {
         },
     });
 
-    // Update article mutation
     const updateArticleMutation = useMutation({
         mutationFn: async (data) => {
             const { id, ...rest } = data;
-            const formData = new FormData();
-
-            // Append all text fields
-            Object.entries(rest).forEach(([key, value]) => {
-                if (key !== "image") {
-                    formData.append(key, value?.toString() ?? "");
-                }
-            });
-
-            // Append image if exists
-            if (data.image) {
-                formData.append("image", data.image);
-            }
-
-            const response = await apiRequest(
-                "PATCH",
-                `/api/articles/${id}`,
-                formData
-            );
-            return await response.json();
+            await updateArticleData(id, rest); // Ensure updateArticleData returns a Promise
+            return data;
         },
         onSuccess: () => {
             toast({
                 title: "Article updated",
                 description: "The article has been updated successfully.",
             });
-            setShowAddArticleModal(false);
+            setShowAddArticleModal(prev => false);
             setCurrentArticle(null);
-            queryClient.invalidateQueries({ queryKey: ["/api/articles"] });
+            queryClient.invalidateQueries({ queryKey: ["articles"] });
         },
         onError: (error) => {
             toast({
@@ -156,11 +124,10 @@ export default function Articles() {
         },
     });
 
-    // Delete article mutation
     const deleteArticleMutation = useMutation({
         mutationFn: async (id) => {
-            const response = await apiRequest("DELETE", `/api/articles/${id}`, null);
-            return await response.json();
+            await deleteArticleData(id); // Ensure deleteArticleData returns a Promise
+            return id;
         },
         onSuccess: () => {
             toast({
@@ -169,8 +136,8 @@ export default function Articles() {
             });
             setShowDeleteConfirm(false);
             setCurrentArticle(null);
-            queryClient.invalidateQueries({ queryKey: ["/api/articles"] });
-            queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
+            queryClient.invalidateQueries({ queryKey: ["articles"] });
+            queryClient.invalidateQueries({ queryKey: ["stats"] });
         },
         onError: (error) => {
             toast({
@@ -186,7 +153,11 @@ export default function Articles() {
         if (currentArticle) {
             updateArticleMutation.mutate({ ...data, id: currentArticle.id });
         } else {
-            createArticleMutation.mutate(data);
+            createArticleMutation.mutate(data, {
+                onSuccess: () => {
+                    console.log("createArticleMutation onSuccess called");
+                }
+            });
         }
     };
 
@@ -227,18 +198,18 @@ export default function Articles() {
     };
 
     // Filter articles by search query
-    const filteredArticles = articles.filter(
+    const filteredArticles = articles?.filter( // Added optional chaining for articles
         (article) =>
             article.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
             article.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
             (article.author &&
                 article.author.toLowerCase().includes(searchQuery.toLowerCase()))
-    );
+    ) ?? []; // Provide a default empty array if articles is undefined
 
     // Find category name by id
     const getCategoryName = (categoryId) => {
         if (!categoryId) return "";
-        const category = categories.find((c) => c.id === categoryId);
+        const category = categoriesData?.find((c) => c.id === categoryId); // Added optional chaining for categoriesData
         return category ? category.name : "";
     };
 
@@ -295,7 +266,7 @@ export default function Articles() {
                                 <TableRow>
                                     <TableHead className="w-12">
                                         <Checkbox
-                                            checked={selectedIds.length === articles.length}
+                                            checked={articles && selectedIds.length === articles.length} // Added articles check
                                             onCheckedChange={(checked) => handleSelectAll(!!checked)}
                                         />
                                     </TableHead>
@@ -353,13 +324,13 @@ export default function Articles() {
                                             </TableCell>
                                             <TableCell>
                                                 <Badge variant="secondary">
-                                                    {getCategoryName(article.categoryId || undefined)}
+                                                    {getCategoryName(article.categoryId)}
                                                 </Badge>
                                             </TableCell>
                                             <TableCell>
                                                 {formatDate(
                                                     article.createdAt || new Date(),
-                                                    "MMM d, yyyy"
+                                                    "MMM d, yyyy" // Corrected format string
                                                 )}
                                             </TableCell>
                                             <TableCell>{article.author || "—"}</TableCell>
@@ -403,7 +374,7 @@ export default function Articles() {
                                 <p className="text-sm text-gray-700 dark:text-gray-400">
                                     Showing <span className="font-medium">1</span> to{" "}
                                     <span className="font-medium">{filteredArticles.length}</span>{" "}
-                                    of <span className="font-medium">{articles.length}</span>{" "}
+                                    of <span className="font-medium">{articles?.length || 0}</span>{" "}
                                     results
                                 </p>
                             </div>
@@ -459,7 +430,7 @@ export default function Articles() {
                         </DialogTitle>
                     </DialogHeader>
                     <ArticleForm
-                        categories={categories}
+                        categories={categoriesData || []} // Use categoriesData with fallback
                         article={currentArticle || undefined}
                         isSubmitting={
                             createArticleMutation.isPending || updateArticleMutation.isPending

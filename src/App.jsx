@@ -6,11 +6,12 @@ import { TooltipProvider } from "./components/ui/tooltip.jsx";
 import NotFound from "./pages/not-found.jsx";
 import Dashboard from "./pages/dashboard.jsx";
 import Articles from "./pages/articles.jsx";
-import Categories from "./pages/categories.jsx";
-import NewsSite from "./pages/news-site.jsx";
 import ArticleDetail from "./pages/article-detail.jsx";
 import { useEffect } from "react";
-import { initializeLocalStorage } from "./data.js";
+import { NewsProvider } from "./context/news-context";
+import NewsSite from "./pages/News-site.jsx";
+import Categories from "./pages/Categories.jsx";
+import { initializeLocalStorage } from "./data.ts";
 
 function Router() {
   return (
@@ -18,7 +19,9 @@ function Router() {
       {/* Admin Routes */}
       <Route path="/admin" component={Dashboard} />
       <Route path="/admin/articles" component={Articles} />
+      <Route path="/articles" component={Articles} />
       <Route path="/admin/categories" component={Categories} />
+      <Route path="/categories" component={Categories} />
 
       {/* Public Routes */}
       <Route path="/" component={NewsSite} />
@@ -39,7 +42,9 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <CustomToaster />
-        <Router />
+        <NewsProvider>
+          <Router />
+        </NewsProvider>
       </TooltipProvider>
     </QueryClientProvider>
   );

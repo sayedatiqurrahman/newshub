@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { apiRequest } from "../../lib/queryClient";
+import { useQueryClient } from "@tanstack/react-query";
+import { addArticle, updateArticle } from "../../data.ts";
 import { Input } from "../../components/ui/input.jsx";
 import { Button } from "../../components/ui/button.jsx";
 import { Textarea } from "../../components/ui/textarea";
@@ -34,13 +34,10 @@ export function ArticleForm({
 }) {
     const { toast } = useToast();
     const queryClient = useQueryClient();
-    const [imagePreview, setImagePreview] = useState(
-        article?.imageUrl || null
-    );
+    const [imagePreview, setImagePreview] = useState(article?.imageUrl || null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState("");
 
-    // Form setup with validation
     const form = useForm({
         defaultValues: {
             title: article?.title || "",
@@ -56,23 +53,20 @@ export function ArticleForm({
         },
     });
 
-    // Generate slug from title
     useEffect(() => {
-        const title = form.watch("title");
-        if (title && !article) {
-            form.setValue("slug", slugify(title));
-        }
-    }, [form.watch("title"), form, article]);
+        const subscription = form.watch((values) => {
+            if (!article && values.title) {
+                form.setValue("slug", slugify(values.title));
+            }
+        });
+        return () => subscription.unsubscribe();
+    }, [form, article]);
 
     const handleImageChange = (e) => {
         const file = e.target.files?.[0];
-
         if (file) {
-            // Preview the selected image
             const reader = new FileReader();
-            reader.onloadend = () => {
-                setImagePreview(reader.result);
-            };
+            reader.onloadend = () => setImagePreview(reader.result);
             reader.readAsDataURL(file);
         } else {
             setImagePreview(null);
@@ -80,42 +74,28 @@ export function ArticleForm({
     };
 
     const onSubmit = async (data) => {
+        setIsSubmitting(true);
+        setError("");
+
+        const articleData = {
+            ...data,
+            categoryId: data.categoryId ? parseInt(data.categoryId) : undefined,
+            imageUrl: imagePreview || data.imageUrl || undefined,
+        };
+
         try {
-            setIsSubmitting(true);
-            setError("");
-
-            const formData = new FormData();
-
-            // Append all text fields
-            Object.keys(data).forEach((key) => {
-                if (key !== "image" && data[key] !== undefined && data[key] !== null) {
-                    formData.append(key, data[key].toString());
-                }
-            });
-
-            // Append image file if present
-            const imageInput =
-                document.querySelector("#image-upload");
-            if (imageInput?.files?.[0]) {
-                formData.append("image", imageInput.files[0]);
-            }
-
-            // Call external submit handler
-            await onSubmitProp(formData);
-
-            toast({
-                title: article ? "Article Updated" : "Article Created",
-                description: article
-                    ? "Your article has been updated successfully."
-                    : "Your article has been created successfully.",
-            });
-
-            if (onSuccess) {
-                onSuccess();
-            }
-
-            if (!article) {
-                // Reset form after creating new article
+            if (article) {
+                await updateArticle(article.id, articleData);
+                toast({
+                    title: "Article Updated",
+                    description: "Your article has been updated successfully.",
+                });
+            } else {
+                await addArticle(articleData);
+                toast({
+                    title: "Article Created",
+                    description: "Your article has been created successfully.",
+                });
                 form.reset({
                     title: "",
                     slug: "",
@@ -130,12 +110,17 @@ export function ArticleForm({
                 });
                 setImagePreview(null);
             }
+
+            if (onSuccess) onSuccess();
+
+            await queryClient.invalidateQueries({ queryKey: ["/api/articles"] });
+            await queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
         } catch (error) {
             console.error("Error submitting article:", error);
             setError(error?.message || "Failed to save article. Please try again.");
             toast({
                 title: "Error",
-                description: "Failed to save article. Please try again.",
+                description: error?.message || "Something went wrong.",
                 variant: "destructive",
             });
         } finally {
@@ -144,9 +129,9 @@ export function ArticleForm({
     };
 
     return (
-        <Card className="w-full max-w-4xl mx-auto">
+        <Card>
             <CardHeader>
-                <CardTitle>{article ? "Edit Article" : "Create New Article"}</CardTitle>
+                <CardTitle>{article ? "Edit Article" : "Add New Article"}</CardTitle>
             </CardHeader>
             <CardContent>
                 {error && (
@@ -155,7 +140,8 @@ export function ArticleForm({
                     </Alert>
                 )}
 
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 overflow-y-auto max-h-[calc(100vh-200px)]">
+                    {/* Title & Slug */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">
                             <Label htmlFor="title">Title</Label>
@@ -164,11 +150,6 @@ export function ArticleForm({
                                 {...form.register("title")}
                                 placeholder="Article title"
                             />
-                            {form.formState.errors.title && (
-                                <p className="text-sm text-red-500">
-                                    {form.formState.errors.title.message}
-                                </p>
-                            )}
                         </div>
 
                         <div className="space-y-2">
@@ -178,14 +159,10 @@ export function ArticleForm({
                                 {...form.register("slug")}
                                 placeholder="article-slug"
                             />
-                            {form.formState.errors.slug && (
-                                <p className="text-sm text-red-500">
-                                    {form.formState.errors.slug.message}
-                                </p>
-                            )}
                         </div>
                     </div>
 
+                    {/* Summary */}
                     <div className="space-y-2">
                         <Label htmlFor="summary">Summary</Label>
                         <Textarea
@@ -194,13 +171,9 @@ export function ArticleForm({
                             placeholder="Brief summary of the article"
                             rows={2}
                         />
-                        {form.formState.errors.summary && (
-                            <p className="text-sm text-red-500">
-                                {form.formState.errors.summary.message}
-                            </p>
-                        )}
                     </div>
 
+                    {/* Content */}
                     <div className="space-y-2">
                         <Label htmlFor="content">Content</Label>
                         <Textarea
@@ -209,13 +182,9 @@ export function ArticleForm({
                             placeholder="Article content"
                             rows={10}
                         />
-                        {form.formState.errors.content && (
-                            <p className="text-sm text-red-500">
-                                {form.formState.errors.content.message}
-                            </p>
-                        )}
                     </div>
 
+                    {/* Author & Category */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">
                             <Label htmlFor="author">Author</Label>
@@ -224,11 +193,6 @@ export function ArticleForm({
                                 {...form.register("author")}
                                 placeholder="Author name"
                             />
-                            {form.formState.errors.author && (
-                                <p className="text-sm text-red-500">
-                                    {form.formState.errors.author.message}
-                                </p>
-                            )}
                         </div>
 
                         <div className="space-y-2">
@@ -253,14 +217,10 @@ export function ArticleForm({
                                     ))}
                                 </SelectContent>
                             </Select>
-                            {form.formState.errors.categoryId && (
-                                <p className="text-sm text-red-500">
-                                    {form.formState.errors.categoryId.message}
-                                </p>
-                            )}
                         </div>
                     </div>
 
+                    {/* Image Upload */}
                     <div className="space-y-2">
                         <Label htmlFor="image-upload">Image</Label>
                         <Input
@@ -269,7 +229,6 @@ export function ArticleForm({
                             accept="image/*"
                             onChange={handleImageChange}
                         />
-
                         {imagePreview && (
                             <div className="mt-2">
                                 <img
@@ -279,15 +238,10 @@ export function ArticleForm({
                                 />
                             </div>
                         )}
-
-                        {/* Hidden input for imageUrl value */}
-                        <input
-                            type="hidden"
-                            {...form.register("imageUrl")}
-                            value={article?.imageUrl || ""}
-                        />
+                        <input type="hidden" {...form.register("imageUrl")} />
                     </div>
 
+                    {/* Options */}
                     <div className="flex flex-col space-y-4">
                         <div className="flex items-center space-x-2">
                             <Checkbox
@@ -323,11 +277,7 @@ export function ArticleForm({
                         </div>
                     </div>
 
-                    <Button
-                        type="submit"
-                        className="w-full md:w-auto"
-                        disabled={isSubmitting}
-                    >
+                    <Button type="submit" className="w-full md:w-auto" disabled={isSubmitting}>
                         {isSubmitting
                             ? "Saving..."
                             : article

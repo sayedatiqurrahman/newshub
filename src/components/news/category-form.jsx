@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiRequest } from "../../lib/queryClient";
 import { Input } from "../../components/ui/input";
 import { Button } from "../../components/ui/button";
 import { Label } from "../../components/ui/label";
@@ -13,11 +12,14 @@ import {
 } from "../../components/ui/card";
 import { Alert, AlertDescription } from "../../components/ui/alert";
 import { useToast } from "../../hooks/use-toast.js";
+import { useNews } from "../../context/news-context";
 import { slugify } from "../../lib/utils";
+
 
 export function CategoryForm({ category, onSuccess }) {
     const { toast } = useToast();
     const queryClient = useQueryClient();
+    const { createCategory, updateCategoryData } = useNews();
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState("");
 
@@ -39,31 +41,15 @@ export function CategoryForm({ category, onSuccess }) {
             setError("");
 
             try {
-                // Generate slug from name if not provided
-                if (!data.slug && data.name) {
-                    data.slug = slugify(data.name);
-                }
-
                 // Determine if we're creating or updating
-                const url = category
-                    ? `/api/categories/${category.id}`
-                    : "/api/categories";
-
-                const method = category ? "PATCH" : "POST";
-
-                let categories = JSON.parse(localStorage.getItem("categories") || "[]");
                 if (category) {
                     // Update existing category
-                    categories = categories.map((c) =>
-                        c.id === category.id ? { ...category, ...data } : c
-                    );
+                    await updateCategoryData(category.id, data);
                 } else {
                     // Create new category
-                    const newCategory = { id: Date.now().toString(), ...data };
-                    categories = [...categories, newCategory];
+                    await createCategory(data);
                 }
-                localStorage.setItem("categories", JSON.stringify(categories));
-                return categories;
+                return data;
             } catch (err) {
                 console.error("Error submitting category:", err);
                 throw err;
@@ -71,9 +57,9 @@ export function CategoryForm({ category, onSuccess }) {
                 setIsSubmitting(false);
             }
         },
-        onSuccess: () => {
+        onSuccess: async () => {
             // Invalidate category queries to refresh data
-            queryClient.invalidateQueries({ queryKey: ["categories"] });
+            await queryClient.invalidateQueries({ queryKey: ["/api/categories"] });
 
             toast({
                 title: category ? "Category Updated" : "Category Created",
@@ -90,10 +76,10 @@ export function CategoryForm({ category, onSuccess }) {
                 // Reset form after creating new category
                 form.reset({
                     name: "",
-                    slug: "",
-                    icon: "",
-                    color: "",
-                    isActive: true,
+                    slug: category?.slug || "",
+                    icon: category?.icon || "",
+                    color: category?.color || "",
+                    isActive: category?.isActive ?? true,
                 });
             }
         },

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { DashboardLayout } from "../components/layout/dashboard-layout.jsx";
 import { CategoryGrid } from "../components/news/category-grid.jsx";
 import { CategoryForm } from "../components/news/category-form.jsx";
@@ -21,7 +22,7 @@ import {
 } from "../components/ui/alert-dialog.jsx";
 import { useToast } from "../hooks/use-toast.js";
 import { Plus, Loader2 } from "lucide-react";
-import { getCategories } from "../data.js";
+import { getCategories } from "../data.ts";
 
 export default function Categories() {
     const { toast } = useToast();
@@ -30,13 +31,10 @@ export default function Categories() {
     const [showAddCategoryModal, setShowAddCategoryModal] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [currentCategory, setCurrentCategory] = useState(null);
-    const [categories, setCategories] = useState([]);
-
-    useEffect(() => {
-        const storedCategories = getCategories();
-        console.log("storedCategories", storedCategories);
-        setCategories(storedCategories);
-    }, [localStorage.getItem("categories")]);
+    const { data: categories = [], isLoading } = useQuery({
+        queryKey: ["/api/categories"],
+        queryFn: () => getCategories(),
+    });
 
     // Handle category edit
     const handleEdit = (category) => {
@@ -75,7 +73,14 @@ export default function Categories() {
                     </div>
                 </div>
                 <div className="p-4">
-                    {categories.length === 0 ? (
+                    {isLoading ? (
+                        <div className="text-center py-10">
+                            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+                                Loading categories...
+                            </h3>
+                            <Loader2 className="mx-auto h-6 w-6 text-gray-400 animate-spin" />
+                        </div>
+                    ) : categories.length === 0 ? (
                         <div className="text-center py-10">
                             <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
                                 No categories found
